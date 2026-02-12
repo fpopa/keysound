@@ -8,23 +8,25 @@ class SoundPlayer {
     private var pitchUnits: [AVAudioUnitTimePitch] = []
     private var currentIndex = 0
 
-    private var keyDownBuffer: AVAudioPCMBuffer?
-    private var keyUpBuffer: AVAudioPCMBuffer?
+    private var keyDownBuffers: [AVAudioPCMBuffer] = []
+    private var keyUpBuffers: [AVAudioPCMBuffer] = []
+    private var lastKeyDownIndex = -1
 
     var volume: Float = 0.5 {
         didSet { engine.mainMixerNode.outputVolume = volume }
     }
 
     init() {
-        loadSounds()
+        let savedPack = UserDefaults.standard.string(forKey: "soundPack") ?? "cherry-mx-brown"
+        loadSoundPack(name: savedPack)
         setupAudioEngine()
     }
 
     private func setupAudioEngine() {
-        let format = keyDownBuffer?.format ?? engine.mainMixerNode.outputFormat(forBus: 0)
+        let format = keyDownBuffers.first?.format ?? engine.mainMixerNode.outputFormat(forBus: 0)
         debugLog("Audio engine format: \(format)")
 
-        for i in 0..<poolSize {
+        for _ in 0..<poolSize {
             let player = AVAudioPlayerNode()
             let pitch = AVAudioUnitTimePitch()
             pitch.rate = 1.0
@@ -48,50 +50,70 @@ class SoundPlayer {
         }
     }
 
-    private func loadSounds() {
-        keyDownBuffer = loadWAV(named: "keydown")
-        keyUpBuffer = loadWAV(named: "keyup")
-        debugLog("Loaded sounds: keyDown=\(keyDownBuffer?.frameLength ?? 0) frames, keyUp=\(keyUpBuffer?.frameLength ?? 0) frames")
+    func loadSoundPack(name: String) {
+        keyDownBuffers = []
+        keyUpBuffers = []
+
+        guard let soundsURL = Bundle.main.resourceURL?.appendingPathComponent("sounds/\(name)") else {
+            debugLog("Could not find sounds/\(name) in bundle")
+            return
+        }
+
+        debugLog("Loading sound pack: \(name) from \(soundsURL.path)")
+
+        let fm = FileManager.default
+        guard let files = try? fm.contentsOfDirectory(at: soundsURL, includingPropertiesForKeys: nil) else {
+            debugLog("Could not list files in \(soundsURL.path)")
+            return
+        }
+
+        for file in files.sorted(by: { $0.lastPathComponent < $1.lastPathComponent }) {
+            let filename = file.lastPathComponent
+            guard filename.hasSuffix(".wav") else { continue }
+
+            if filename.hasPrefix("keydown_"), let buf = loadWAV(url: file) {
+                keyDownBuffers.append(buf)
+            } else if filename.hasPrefix("keyup_"), let buf = loadWAV(url: file) {
+                keyUpBuffers.append(buf)
+            }
+        }
+
+        lastKeyDownIndex = -1
+        debugLog("Loaded pack '\(name)': \(keyDownBuffers.count) keydown, \(keyUpBuffers.count) keyup")
     }
 
-    private func loadWAV(named name: String) -> AVAudioPCMBuffer? {
-        guard let url = Bundle.main.url(forResource: name, withExtension: "wav") else {
-            debugLog("Could not find \(name).wav in bundle. Bundle path: \(Bundle.main.bundlePath)")
-            debugLog("Bundle resource path: \(Bundle.main.resourcePath ?? "nil")")
-            return nil
-        }
-        debugLog("Found \(name).wav at \(url.path)")
-
+    private func loadWAV(url: URL) -> AVAudioPCMBuffer? {
         do {
             let file = try AVAudioFile(forReading: url)
-            debugLog("\(name).wav file format: \(file.fileFormat), processing format: \(file.processingFormat), length: \(file.length)")
             guard let buffer = AVAudioPCMBuffer(pcmFormat: file.processingFormat, frameCapacity: AVAudioFrameCount(file.length)) else {
-                debugLog("Could not create buffer for \(name).wav")
+                debugLog("Could not create buffer for \(url.lastPathComponent)")
                 return nil
             }
             try file.read(into: buffer)
             return buffer
         } catch {
-            debugLog("Failed to load \(name).wav: \(error)")
+            debugLog("Failed to load \(url.lastPathComponent): \(error)")
             return nil
         }
     }
 
     func playKeyDown() {
-        guard let buffer = keyDownBuffer else {
-            debugLog("playKeyDown: no buffer!")
+        guard !keyDownBuffers.isEmpty else {
+            debugLog("playKeyDown: no buffers!")
             return
         }
-        debugLog("playKeyDown")
-        play(buffer: buffer)
+        var idx = Int.random(in: 0..<keyDownBuffers.count)
+        if keyDownBuffers.count > 1 && idx == lastKeyDownIndex {
+            idx = (idx + 1) % keyDownBuffers.count
+        }
+        lastKeyDownIndex = idx
+        play(buffer: keyDownBuffers[idx])
     }
 
     func playKeyUp() {
-        guard let buffer = keyUpBuffer else {
-            debugLog("playKeyUp: no buffer!")
-            return
-        }
-        play(buffer: buffer)
+        guard !keyUpBuffers.isEmpty else { return }
+        let idx = Int.random(in: 0..<keyUpBuffers.count)
+        play(buffer: keyUpBuffers[idx])
     }
 
     private func play(buffer: AVAudioPCMBuffer) {
@@ -107,6 +129,5 @@ class SoundPlayer {
 
         player.scheduleBuffer(buffer, at: nil, options: .interrupts, completionHandler: nil)
         player.play()
-        debugLog("play: node[\(index)] engine.running=\(engine.isRunning) player.playing=\(player.isPlaying)")
     }
 }

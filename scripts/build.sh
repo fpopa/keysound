@@ -30,8 +30,8 @@ cp "$BINARY" "$APP_BUNDLE/Contents/MacOS/${APP_NAME}"
 cp "$PROJECT_DIR/Info.plist" "$APP_BUNDLE/Contents/Info.plist"
 
 # Copy resources
-if [ -d "$PROJECT_DIR/Resources" ]; then
-    cp "$PROJECT_DIR/Resources/"*.wav "$APP_BUNDLE/Contents/Resources/" 2>/dev/null || true
+if [ -d "$PROJECT_DIR/Resources/sounds" ]; then
+    cp -R "$PROJECT_DIR/Resources/sounds" "$APP_BUNDLE/Contents/Resources/sounds"
 fi
 
 # Codesign so macOS Accessibility permission persists across rebuilds.

@@ -23,12 +23,19 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var keyMonitor: KeyMonitor?
     private var soundPlayer: SoundPlayer?
     private var isEnabled = true
+    private var profileMenuItems: [NSMenuItem] = []
+
+    private let soundPacks: [(name: String, label: String)] = [
+        ("cherry-mx-brown", "Cherry MX Brown"),
+        ("tactile", "Tactile"),
+        ("clicky", "Clicky"),
+    ]
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         debugLog("App launched")
         setupMenuBar()
         soundPlayer = SoundPlayer()
-        debugLog("SoundPlayer created, keyDownBuffer=\(soundPlayer != nil ? "ok" : "nil")")
+        debugLog("SoundPlayer created")
         keyMonitor = KeyMonitor { [weak self] event in
             self?.handleKeyEvent(event)
         }
@@ -65,6 +72,25 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         menu.addItem(NSMenuItem.separator())
 
+        // Sound profile submenu
+        let profileItem = NSMenuItem(title: "Sound Profile", action: nil, keyEquivalent: "")
+        let profileMenu = NSMenu()
+        let currentPack = UserDefaults.standard.string(forKey: "soundPack") ?? "cherry-mx-brown"
+
+        for pack in soundPacks {
+            let item = NSMenuItem(title: pack.label, action: #selector(selectProfile(_:)), keyEquivalent: "")
+            item.target = self
+            item.representedObject = pack.name
+            item.state = pack.name == currentPack ? .on : .off
+            profileMenu.addItem(item)
+            profileMenuItems.append(item)
+        }
+
+        profileItem.submenu = profileMenu
+        menu.addItem(profileItem)
+
+        menu.addItem(NSMenuItem.separator())
+
         let testItem = NSMenuItem(title: "Test Sound", action: #selector(testSound), keyEquivalent: "t")
         testItem.target = self
         menu.addItem(testItem)
@@ -88,6 +114,19 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         soundPlayer?.volume = Float(sender.doubleValue)
     }
 
+    @objc private func selectProfile(_ sender: NSMenuItem) {
+        guard let packName = sender.representedObject as? String else { return }
+        debugLog("Selecting sound profile: \(packName)")
+
+        for item in profileMenuItems {
+            item.state = .off
+        }
+        sender.state = .on
+
+        UserDefaults.standard.set(packName, forKey: "soundPack")
+        soundPlayer?.loadSoundPack(name: packName)
+    }
+
     @objc private func testSound() {
         debugLog("Test Sound clicked")
         soundPlayer?.playKeyDown()
@@ -98,7 +137,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func handleKeyEvent(_ event: KeyEvent) {
-        debugLog("handleKeyEvent: \(event), enabled=\(isEnabled)")
         guard isEnabled else { return }
         switch event {
         case .keyDown:
