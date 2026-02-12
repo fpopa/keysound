@@ -11,6 +11,10 @@ class SoundPlayer {
     private var keyDownBuffer: AVAudioPCMBuffer?
     private var keyUpBuffer: AVAudioPCMBuffer?
 
+    var volume: Float = 0.5 {
+        didSet { engine.mainMixerNode.outputVolume = volume }
+    }
+
     init() {
         loadSounds()
         setupAudioEngine()
@@ -37,6 +41,7 @@ class SoundPlayer {
 
         do {
             try engine.start()
+            engine.mainMixerNode.outputVolume = volume
             debugLog("Audio engine started, running=\(engine.isRunning)")
         } catch {
             debugLog("FAILED to start audio engine: \(error)")

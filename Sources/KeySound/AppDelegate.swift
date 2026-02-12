@@ -50,6 +50,19 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         enabledMenuItem.state = .on
         menu.addItem(enabledMenuItem)
 
+        // Volume slider
+        let sliderItem = NSMenuItem()
+        let sliderView = NSView(frame: NSRect(x: 0, y: 0, width: 200, height: 30))
+        let label = NSTextField(labelWithString: "Vol")
+        label.frame = NSRect(x: 14, y: 5, width: 28, height: 20)
+        label.font = NSFont.systemFont(ofSize: 12)
+        let slider = NSSlider(value: 0.5, minValue: 0, maxValue: 1, target: self, action: #selector(volumeChanged(_:)))
+        slider.frame = NSRect(x: 42, y: 5, width: 140, height: 20)
+        sliderView.addSubview(label)
+        sliderView.addSubview(slider)
+        sliderItem.view = sliderView
+        menu.addItem(sliderItem)
+
         menu.addItem(NSMenuItem.separator())
 
         let testItem = NSMenuItem(title: "Test Sound", action: #selector(testSound), keyEquivalent: "t")
@@ -69,6 +82,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         isEnabled.toggle()
         enabledMenuItem.state = isEnabled ? .on : .off
         debugLog("Toggled enabled=\(isEnabled)")
+    }
+
+    @objc private func volumeChanged(_ sender: NSSlider) {
+        soundPlayer?.volume = Float(sender.doubleValue)
     }
 
     @objc private func testSound() {
