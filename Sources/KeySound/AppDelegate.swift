@@ -26,12 +26,17 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var isEnabled = true
     private var profileMenuItems: [NSMenuItem] = []
 
-    private let soundPacks: [(name: String, label: String)] = [
-        ("cherry-mx-brown", "Cherry MX Brown"),
-        ("tactile", "Tactile"),
-        ("clicky", "Clicky"),
-        ("debug", "Debug Click"),
-    ]
+    private let soundPacks: [(name: String, label: String)] = {
+        var packs = [
+            ("cherry-mx-brown", "Cherry MX Brown"),
+            ("tactile", "Tactile"),
+            ("clicky", "Clicky"),
+        ]
+        #if DEBUG_FEATURES
+        packs.append(("debug", "Debug Click"))
+        #endif
+        return packs
+    }()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         debugLog("App launched")
@@ -109,11 +114,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         menu.addItem(NSMenuItem.separator())
 
+        #if DEBUG_FEATURES
         let testItem = NSMenuItem(title: "Test Sound", action: #selector(testSound), keyEquivalent: "t")
         testItem.target = self
         menu.addItem(testItem)
 
         menu.addItem(NSMenuItem.separator())
+        #endif
 
         let quitItem = NSMenuItem(title: "Quit KeySound", action: #selector(quitApp), keyEquivalent: "q")
         quitItem.target = self
@@ -157,10 +164,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         soundPlayer?.loadSoundPack(name: packName)
     }
 
+    #if DEBUG_FEATURES
     @objc private func testSound() {
         debugLog("Test Sound clicked")
         soundPlayer?.playKeyDown()
     }
+    #endif
 
     @objc private func quitApp() {
         NSApplication.shared.terminate(nil)

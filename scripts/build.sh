@@ -6,12 +6,17 @@ PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 APP_NAME="KeySound"
 APP_BUNDLE="$PROJECT_DIR/build/${APP_NAME}.app"
 
+SWIFT_FLAGS=""
+if [ "${ENABLE_DEBUG_FEATURES:-1}" = "1" ]; then
+    SWIFT_FLAGS="-Xswiftc -DDEBUG_FEATURES"
+fi
+
 echo "Building ${APP_NAME}..."
 cd "$PROJECT_DIR"
-swift build -c release 2>&1
+swift build -c release $SWIFT_FLAGS 2>&1
 
 # Get the built binary path
-BINARY=$(swift build -c release --show-bin-path)/${APP_NAME}
+BINARY=$(swift build -c release $SWIFT_FLAGS --show-bin-path)/${APP_NAME}
 
 if [ ! -f "$BINARY" ]; then
     echo "Error: Binary not found at $BINARY"

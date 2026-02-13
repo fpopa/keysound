@@ -1,4 +1,4 @@
-.PHONY: sounds build run clean
+.PHONY: sounds build run ship clean
 
 sounds:
 	bash scripts/prepare-sounds.sh
@@ -8,6 +8,9 @@ build: sounds
 
 run: build
 	open build/KeySound.app
+
+ship: sounds
+	ENABLE_DEBUG_FEATURES=0 bash scripts/build.sh
 
 clean:
 	rm -rf build .build
