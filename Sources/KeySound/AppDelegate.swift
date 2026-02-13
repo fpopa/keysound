@@ -20,6 +20,7 @@ func debugLog(_ msg: String) {
 class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem!
     private var enabledMenuItem: NSMenuItem!
+    private var variationLabel: NSTextField!
     private var keyMonitor: KeyMonitor?
     private var soundPlayer: SoundPlayer?
     private var isEnabled = true
@@ -29,6 +30,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         ("cherry-mx-brown", "Cherry MX Brown"),
         ("tactile", "Tactile"),
         ("clicky", "Clicky"),
+        ("debug", "Debug Click"),
     ]
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -72,6 +74,22 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         menu.addItem(NSMenuItem.separator())
 
+        // Pitch variation slider
+        let savedRange = UserDefaults.standard.object(forKey: "pitchVariationRange") as? Double ?? 0.05
+        let varItem = NSMenuItem()
+        let varView = NSView(frame: NSRect(x: 0, y: 0, width: 200, height: 30))
+        variationLabel = NSTextField(labelWithString: formatVariation(savedRange))
+        variationLabel.frame = NSRect(x: 14, y: 5, width: 40, height: 20)
+        variationLabel.font = NSFont.monospacedDigitSystemFont(ofSize: 12, weight: .regular)
+        let varSlider = NSSlider(value: savedRange, minValue: 0, maxValue: 0.20, target: self, action: #selector(variationChanged(_:)))
+        varSlider.frame = NSRect(x: 54, y: 5, width: 128, height: 20)
+        varView.addSubview(variationLabel)
+        varView.addSubview(varSlider)
+        varItem.view = varView
+        menu.addItem(varItem)
+
+        menu.addItem(NSMenuItem.separator())
+
         // Sound profile submenu
         let profileItem = NSMenuItem(title: "Sound Profile", action: nil, keyEquivalent: "")
         let profileMenu = NSMenu()
@@ -110,6 +128,18 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         debugLog("Toggled enabled=\(isEnabled)")
     }
 
+    @objc private func variationChanged(_ sender: NSSlider) {
+        let value = Float(sender.doubleValue)
+        soundPlayer?.pitchVariationRange = value
+        UserDefaults.standard.set(sender.doubleValue, forKey: "pitchVariationRange")
+        variationLabel.stringValue = formatVariation(sender.doubleValue)
+    }
+
+    private func formatVariation(_ value: Double) -> String {
+        let pct = Int(round(value * 100))
+        return pct == 0 ? "Pitch" : "±\(pct)%"
+    }
+
     @objc private func volumeChanged(_ sender: NSSlider) {
         soundPlayer?.volume = Float(sender.doubleValue)
     }
@@ -139,10 +169,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private func handleKeyEvent(_ event: KeyEvent) {
         guard isEnabled else { return }
         switch event {
-        case .keyDown:
-            soundPlayer?.playKeyDown()
-        case .keyUp:
-            soundPlayer?.playKeyUp()
+        case .keyDown(let timestamp):
+            soundPlayer?.playKeyDown(eventTime: timestamp)
+        case .keyUp(let timestamp):
+            soundPlayer?.playKeyUp(eventTime: timestamp)
         }
     }
 }

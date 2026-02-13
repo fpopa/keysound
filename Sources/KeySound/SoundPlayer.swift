@@ -1,3 +1,4 @@
+import AudioToolbox
 import AVFoundation
 import Foundation
 
@@ -5,12 +6,14 @@ class SoundPlayer {
     private let engine = AVAudioEngine()
     private let poolSize = 8
     private var playerNodes: [AVAudioPlayerNode] = []
-    private var pitchUnits: [AVAudioUnitTimePitch] = []
+    private var varispeedUnits: [AVAudioUnitVarispeed] = []
     private var currentIndex = 0
 
     private var keyDownBuffers: [AVAudioPCMBuffer] = []
     private var keyUpBuffers: [AVAudioPCMBuffer] = []
     private var lastKeyDownIndex = -1
+
+    var pitchVariationRange: Float = 0.05
 
     var volume: Float = 0.5 {
         didSet { engine.mainMixerNode.outputVolume = volume }
@@ -19,32 +22,48 @@ class SoundPlayer {
     init() {
         let savedPack = UserDefaults.standard.string(forKey: "soundPack") ?? "cherry-mx-brown"
         loadSoundPack(name: savedPack)
+        if let saved = UserDefaults.standard.object(forKey: "pitchVariationRange") as? Float {
+            pitchVariationRange = saved
+        }
         setupAudioEngine()
     }
 
     private func setupAudioEngine() {
+        // Reduce I/O buffer size: 128 frames ≈ 2.9ms at 44100Hz (default is 512 ≈ 11.6ms)
+        if let audioUnit = engine.outputNode.audioUnit {
+            var bufferSize: UInt32 = 128
+            let status = AudioUnitSetProperty(
+                audioUnit,
+                kAudioDevicePropertyBufferFrameSize,
+                kAudioUnitScope_Global, 0,
+                &bufferSize, UInt32(MemoryLayout<UInt32>.size))
+            debugLog("Set buffer size to 128 frames: status=\(status)")
+        }
+
         let format = keyDownBuffers.first?.format ?? engine.mainMixerNode.outputFormat(forBus: 0)
         debugLog("Audio engine format: \(format)")
 
         for _ in 0..<poolSize {
             let player = AVAudioPlayerNode()
-            let pitch = AVAudioUnitTimePitch()
-            pitch.rate = 1.0
+            let varispeed = AVAudioUnitVarispeed()
+            varispeed.rate = 1.0
 
             engine.attach(player)
-            engine.attach(pitch)
-            engine.connect(player, to: pitch, format: format)
-            engine.connect(pitch, to: engine.mainMixerNode, format: format)
+            engine.attach(varispeed)
+            engine.connect(player, to: varispeed, format: format)
+            engine.connect(varispeed, to: engine.mainMixerNode, format: format)
 
             playerNodes.append(player)
-            pitchUnits.append(pitch)
+            varispeedUnits.append(varispeed)
         }
-        debugLog("Attached \(poolSize) player nodes")
+        debugLog("Attached \(poolSize) player nodes with varispeed")
 
         do {
             try engine.start()
             engine.mainMixerNode.outputVolume = volume
             debugLog("Audio engine started, running=\(engine.isRunning)")
+            debugLog("outputNode.presentationLatency: \(engine.outputNode.presentationLatency)")
+            debugLog("outputNode.latency: \(engine.outputNode.latency)")
         } catch {
             debugLog("FAILED to start audio engine: \(error)")
         }
@@ -97,7 +116,7 @@ class SoundPlayer {
         }
     }
 
-    func playKeyDown() {
+    func playKeyDown(eventTime: UInt64 = 0) {
         guard !keyDownBuffers.isEmpty else {
             debugLog("playKeyDown: no buffers!")
             return
@@ -107,27 +126,39 @@ class SoundPlayer {
             idx = (idx + 1) % keyDownBuffers.count
         }
         lastKeyDownIndex = idx
-        play(buffer: keyDownBuffers[idx])
+        play(buffer: keyDownBuffers[idx], eventTime: eventTime)
     }
 
-    func playKeyUp() {
+    func playKeyUp(eventTime: UInt64 = 0) {
         guard !keyUpBuffers.isEmpty else { return }
         let idx = Int.random(in: 0..<keyUpBuffers.count)
-        play(buffer: keyUpBuffers[idx])
+        play(buffer: keyUpBuffers[idx], eventTime: eventTime)
     }
 
-    private func play(buffer: AVAudioPCMBuffer) {
+    private func play(buffer: AVAudioPCMBuffer, eventTime: UInt64) {
         let index = currentIndex % poolSize
         currentIndex += 1
 
         let player = playerNodes[index]
-        let pitch = pitchUnits[index]
+        let varispeed = varispeedUnits[index]
 
-        let factor = Double.random(in: 0.95...1.05)
-        let cents = Float(1200.0 * log2(factor))
-        pitch.pitch = cents
+        if pitchVariationRange > 0 {
+            varispeed.rate = Float.random(in: (1 - pitchVariationRange)...(1 + pitchVariationRange))
+        } else {
+            varispeed.rate = 1.0
+        }
 
         player.scheduleBuffer(buffer, at: nil, options: .interrupts, completionHandler: nil)
         player.play()
+
+        if eventTime != 0 {
+            var info = mach_timebase_info_data_t()
+            mach_timebase_info(&info)
+            let now = mach_absolute_time()
+            let elapsedTicks = now - eventTime
+            let elapsedNs = elapsedTicks * UInt64(info.numer) / UInt64(info.denom)
+            let elapsedMs = Double(elapsedNs) / 1_000_000.0
+            debugLog("play() software overhead: \(String(format: "%.2f", elapsedMs))ms")
+        }
     }
 }

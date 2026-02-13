@@ -37,4 +37,40 @@ for f in "$STAV"/*_tactile_*.ogg; do
 done
 echo "tactile: $((i - 1)) keydown"
 
+# --- Debug Click (synthetic sharp impulse) ---
+python3 "$SCRIPT_DIR/generate-debug-click.py"
+
+# --- Trim leading silence from all WAV files ---
+echo "Trimming leading silence..."
+python3 -c "
+import os, struct, wave
+
+def trim_silence(path, threshold_pct=5, runway=10):
+    with wave.open(path, 'r') as wf:
+        n = wf.getnframes()
+        if n == 0: return
+        raw = wf.readframes(n)
+        params = wf.getparams()
+    samples = struct.unpack(f'<{n}h', raw)
+    peak = max(abs(s) for s in samples) if samples else 0
+    if peak == 0: return
+    threshold = peak * threshold_pct / 100
+    first = 0
+    for i, s in enumerate(samples):
+        if abs(s) > threshold:
+            first = max(0, i - runway)
+            break
+    if first == 0: return
+    trimmed = samples[first:]
+    with wave.open(path, 'w') as wf:
+        wf.setparams(params)
+        wf.writeframes(struct.pack(f'<{len(trimmed)}h', *trimmed))
+    print(f'  trimmed {first} samples from {os.path.basename(path)}')
+
+for root, dirs, files in os.walk('$OUTPUT'):
+    for f in sorted(files):
+        if f.endswith('.wav'):
+            trim_silence(os.path.join(root, f))
+"
+
 echo "Done. Output in $OUTPUT"

@@ -3,8 +3,8 @@ import CoreGraphics
 import Foundation
 
 enum KeyEvent {
-    case keyDown
-    case keyUp
+    case keyDown(timestamp: UInt64)
+    case keyUp(timestamp: UInt64)
 }
 
 class KeyMonitor {
@@ -71,6 +71,7 @@ class KeyMonitor {
             callback: { proxy, type, event, userInfo -> Unmanaged<CGEvent>? in
                 guard let userInfo = userInfo else { return Unmanaged.passUnretained(event) }
                 let monitor = Unmanaged<KeyMonitor>.fromOpaque(userInfo).takeUnretainedValue()
+                let timestamp = mach_absolute_time()
 
                 if type == .tapDisabledByTimeout {
                     debugLog("Event tap disabled by timeout, re-enabling")
@@ -82,12 +83,11 @@ class KeyMonitor {
 
                 switch type {
                 case .keyDown:
-                    debugLog("CGEvent: keyDown")
-                    monitor.callback(.keyDown)
+                    monitor.callback(.keyDown(timestamp: timestamp))
                 case .keyUp:
-                    monitor.callback(.keyUp)
+                    monitor.callback(.keyUp(timestamp: timestamp))
                 default:
-                    debugLog("CGEvent: other type \(type.rawValue)")
+                    break
                 }
 
                 return Unmanaged.passUnretained(event)
