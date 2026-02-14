@@ -1,0 +1,26 @@
+name: Build & Release
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build ship variant
+        run: make ship
+
+      - name: Create DMG
+        run: bash scripts/create-dmg.sh
+
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tag="build-$(git rev-parse --short HEAD)"
+          gh release create "$tag" build/KeySound.dmg \
+            --title "KeySound $tag" \
+            --notes "Built from $(git rev-parse --short HEAD) on $(date -u +%Y-%m-%d)"
