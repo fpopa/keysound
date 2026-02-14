@@ -42,7 +42,7 @@ fi
 # Codesign so macOS Accessibility permission persists across rebuilds.
 # Use a real signing identity if available (stable CDHash across rebuilds),
 # otherwise fall back to ad-hoc (requires re-granting permission each build).
-IDENTITY=$(security find-identity -v -p codesigning 2>/dev/null | grep -o '"[^"]*"' | head -1 | tr -d '"')
+IDENTITY=$(security find-identity -v -p codesigning 2>/dev/null | grep -o '"[^"]*"' | head -1 | tr -d '"' || true)
 if [ -n "$IDENTITY" ]; then
     echo "Signing with: $IDENTITY"
     codesign --force --sign "$IDENTITY" --identifier com.keysound.app "$APP_BUNDLE"
