@@ -1,0 +1,23 @@
+services:
+  keysound-site:
+    image: ghcr.io/fpopa/keysound-site:latest
+    container_name: keysound-site
+    restart: unless-stopped
+    networks:
+      - keysound
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: keysound-cloudflared
+    restart: unless-stopped
+    command: tunnel run
+    environment:
+      - TUNNEL_TOKEN=${TUNNEL_TOKEN}
+    depends_on:
+      - keysound-site
+    networks:
+      - keysound
+
+networks:
+  keysound:
+    driver: bridge

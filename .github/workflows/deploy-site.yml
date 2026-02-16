@@ -1,0 +1,56 @@
+name: Deploy Landing Page
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'site/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: site
+          push: true
+          tags: |
+            ghcr.io/fpopa/keysound-site:latest
+            ghcr.io/fpopa/keysound-site:${{ github.sha }}
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.SERVER_IP }} >> ~/.ssh/known_hosts
+
+      - name: Deploy to server
+        env:
+          SERVER: ${{ secrets.SERVER_IP }}
+          TUNNEL_TOKEN: ${{ secrets.KEYSOUND_TUNNEL_TOKEN }}
+        run: |
+          ssh root@$SERVER "mkdir -p /opt/keysound.filippopa.com"
+          scp site/docker-compose.yml root@$SERVER:/opt/keysound.filippopa.com/docker-compose.yml
+          ssh root@$SERVER "
+            cd /opt/keysound.filippopa.com
+            echo 'TUNNEL_TOKEN=$TUNNEL_TOKEN' > .env
+            echo '${{ secrets.GITHUB_TOKEN }}' | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            docker compose pull
+            docker compose up -d
+          "

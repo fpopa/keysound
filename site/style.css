@@ -1,0 +1,272 @@
+/* ============================================
+   KeySound — keysound.filippopa.com
+   Industrial-minimal dark theme
+   ============================================ */
+
+:root {
+  --bg:         #0e0e10;
+  --bg-raised:  #18181b;
+  --bg-card:    #1c1c20;
+  --border:     #2a2a2f;
+  --text:       #c8c8cd;
+  --text-dim:   #6e6e78;
+  --text-bright:#eeeef0;
+  --accent:     #e8c468;
+  --accent-dim: #b89840;
+  --mono: ui-monospace, 'SF Mono', 'Cascadia Mono', 'Menlo', 'Consolas', monospace;
+  --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', sans-serif;
+}
+
+/* ---- Reset ---- */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: var(--sans);
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* ---- Layout ---- */
+main {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+/* ---- Hero ---- */
+.hero {
+  padding: 120px 0 80px;
+  text-align: center;
+}
+
+.hero-badge {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 4px 12px;
+  margin-bottom: 32px;
+}
+
+.hero-icon {
+  display: block;
+  margin: 0 auto 16px;
+  color: var(--accent);
+}
+
+.hero h1 {
+  font-family: var(--mono);
+  font-size: clamp(2.5rem, 8vw, 4rem);
+  font-weight: 700;
+  color: var(--text-bright);
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+.hero h1 .accent {
+  color: var(--accent);
+}
+
+.tagline {
+  font-size: 1.2rem;
+  color: var(--text-dim);
+  margin-top: 12px;
+}
+
+/* ---- CTA Button ---- */
+.cta {
+  margin-top: 40px;
+}
+
+.btn-download {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  background: var(--accent);
+  color: var(--bg);
+  border-radius: 8px;
+  padding: 14px 36px;
+  text-decoration: none;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+  box-shadow: 0 0 0 0 rgba(232, 196, 104, 0);
+}
+
+.btn-download:hover {
+  text-decoration: none;
+  transform: translateY(-2px);
+  background: #f0d080;
+  box-shadow: 0 4px 24px rgba(232, 196, 104, 0.2);
+}
+
+.btn-download:active {
+  transform: translateY(0);
+}
+
+.btn-label {
+  font-family: var(--mono);
+  font-weight: 700;
+  font-size: 1rem;
+  letter-spacing: 0.01em;
+}
+
+.btn-meta {
+  font-size: 0.75rem;
+  opacity: 0.7;
+}
+
+.btn-download--lg {
+  padding: 18px 48px;
+}
+
+.btn-download--lg .btn-label {
+  font-size: 1.1rem;
+}
+
+/* ---- About ---- */
+.about {
+  padding: 40px 0 60px;
+  border-top: 1px solid var(--border);
+}
+
+.about-inner {
+  max-width: 520px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.about p {
+  font-size: 1.1rem;
+  line-height: 1.7;
+  color: var(--text);
+}
+
+.about em {
+  color: var(--text-bright);
+  font-style: normal;
+  font-weight: 600;
+}
+
+/* ---- Features ---- */
+.features {
+  padding: 20px 0 80px;
+}
+
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.feature-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 24px 20px;
+  transition: border-color 0.2s ease;
+}
+
+.feature-card:hover {
+  border-color: #3a3a42;
+}
+
+.feature-key {
+  width: 44px;
+  height: 44px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-bottom-width: 3px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--text-dim);
+  letter-spacing: 0.02em;
+  box-shadow: 0 1px 0 var(--border);
+}
+
+.feature-card h3 {
+  font-family: var(--mono);
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-bright);
+  margin-bottom: 6px;
+}
+
+.feature-card p {
+  font-size: 0.85rem;
+  color: var(--text-dim);
+  line-height: 1.5;
+}
+
+/* ---- Download section ---- */
+.download {
+  text-align: center;
+  padding: 60px 0 80px;
+  border-top: 1px solid var(--border);
+}
+
+.download-note {
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  color: var(--text-dim);
+  margin-bottom: 24px;
+  line-height: 1.6;
+}
+
+/* ---- Footer ---- */
+footer {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 32px 24px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  color: var(--text-dim);
+}
+
+footer a {
+  color: var(--text-dim);
+}
+
+footer a:hover {
+  color: var(--text);
+}
+
+/* ---- Responsive ---- */
+@media (max-width: 480px) {
+  .hero {
+    padding: 80px 0 60px;
+  }
+
+  .features-grid {
+    grid-template-columns: 1fr;
+  }
+
+  footer {
+    flex-direction: column;
+    gap: 8px;
+    text-align: center;
+  }
+}
