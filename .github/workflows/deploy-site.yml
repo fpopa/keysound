@@ -45,9 +45,9 @@ jobs:
           SERVER: ${{ secrets.SERVER_IP }}
           TUNNEL_TOKEN: ${{ secrets.KEYSOUND_TUNNEL_TOKEN }}
         run: |
-          ssh root@$SERVER "mkdir -p /opt/keysound.filippopa.com"
-          scp site/docker-compose.yml root@$SERVER:/opt/keysound.filippopa.com/docker-compose.yml
-          ssh root@$SERVER "
+          ssh ubuntu@$SERVER "sudo mkdir -p /opt/keysound.filippopa.com && sudo chown ubuntu:ubuntu /opt/keysound.filippopa.com"
+          scp site/docker-compose.yml ubuntu@$SERVER:/opt/keysound.filippopa.com/docker-compose.yml
+          ssh ubuntu@$SERVER "
             cd /opt/keysound.filippopa.com
             echo 'TUNNEL_TOKEN=$TUNNEL_TOKEN' > .env
             echo '${{ secrets.GITHUB_TOKEN }}' | docker login ghcr.io -u ${{ github.actor }} --password-stdin
