@@ -83,6 +83,9 @@ class KeyMonitor {
 
                 switch type {
                 case .keyDown:
+                    if event.getIntegerValueField(.keyboardEventAutorepeat) != 0 {
+                        return Unmanaged.passUnretained(event)
+                    }
                     monitor.callback(.keyDown(timestamp: timestamp))
                 case .keyUp:
                     monitor.callback(.keyUp(timestamp: timestamp))
