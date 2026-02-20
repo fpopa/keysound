@@ -1,9 +1,18 @@
 import AudioToolbox
 import AVFoundation
+import CoreAudio
 import Foundation
 
+private let outputDeviceChangedCallback: AudioObjectPropertyListenerProc = {
+    _, _, _, clientData in
+    guard let clientData = clientData else { return noErr }
+    let player = Unmanaged<SoundPlayer>.fromOpaque(clientData).takeUnretainedValue()
+    DispatchQueue.main.async { player.restartAudioEngine() }
+    return noErr
+}
+
 class SoundPlayer {
-    private let engine = AVAudioEngine()
+    private var engine = AVAudioEngine()
     private let poolSize = 8
     private var playerNodes: [AVAudioPlayerNode] = []
     private var varispeedUnits: [AVAudioUnitVarispeed] = []
@@ -25,6 +34,45 @@ class SoundPlayer {
         if let saved = UserDefaults.standard.object(forKey: "pitchVariationRange") as? Float {
             pitchVariationRange = saved
         }
+        setupAudioEngine()
+        startListeningForDeviceChanges()
+    }
+
+    deinit {
+        stopListeningForDeviceChanges()
+    }
+
+    private func startListeningForDeviceChanges() {
+        var address = AudioObjectPropertyAddress(
+            mSelector: kAudioHardwarePropertyDefaultOutputDevice,
+            mScope: kAudioObjectPropertyScopeGlobal,
+            mElement: kAudioObjectPropertyElementMain)
+        AudioObjectAddPropertyListener(
+            AudioObjectID(kAudioObjectSystemObject), &address,
+            outputDeviceChangedCallback,
+            Unmanaged.passUnretained(self).toOpaque())
+    }
+
+    private func stopListeningForDeviceChanges() {
+        var address = AudioObjectPropertyAddress(
+            mSelector: kAudioHardwarePropertyDefaultOutputDevice,
+            mScope: kAudioObjectPropertyScopeGlobal,
+            mElement: kAudioObjectPropertyElementMain)
+        AudioObjectRemovePropertyListener(
+            AudioObjectID(kAudioObjectSystemObject), &address,
+            outputDeviceChangedCallback,
+            Unmanaged.passUnretained(self).toOpaque())
+    }
+
+    func restartAudioEngine() {
+        debugLog("Output device changed, restarting audio engine")
+        engine.stop()
+        for player in playerNodes { engine.detach(player) }
+        for varispeed in varispeedUnits { engine.detach(varispeed) }
+        playerNodes.removeAll()
+        varispeedUnits.removeAll()
+        currentIndex = 0
+        engine = AVAudioEngine()
         setupAudioEngine()
     }
 
